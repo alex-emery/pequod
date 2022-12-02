@@ -22,17 +22,16 @@ func (r PodStatus) String() string {
 }
 
 type model struct {
-	spinner  spinner.Model
+	client   *Client
 	pods     []PodStatus
 	quitting bool
 }
 
-func newModel() model {
-	s := spinner.New()
-	s.Style = spinnerStyle
+func newModel(client *Client) model {
+	pods, _ := client.GetPods()
 	return model{
-		spinner: s,
-		pods:    make([]PodStatus, 5),
+		client: client,
+		pods:   pods,
 	}
 }
 
@@ -43,18 +42,18 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		m.quitting = true
-		return m, tea.Quit
-	case PodMsg:
-		m.pods = msg.pods
-		return m, nil
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
-	default:
-		return m, nil
+		switch msg.String() {
+		case "q":
+			m.quitting = true
+			return m, tea.Quit
+		case "r":
+			pods, _ := m.client.GetPods()
+			m.pods = pods
+			return m, nil
+		}
 	}
+
+	return m, nil
 }
 
 func (m model) View() string {
@@ -62,8 +61,6 @@ func (m model) View() string {
 
 	if m.quitting {
 		s += "That’s all for today!"
-	} else {
-		s += m.spinner.View() + "Watching..."
 	}
 
 	s += "\n\n"

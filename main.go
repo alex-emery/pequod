@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,18 +15,16 @@ import (
 )
 
 func main() {
-	p := tea.NewProgram(newModel(), tea.WithAltScreen())
+	client := GetKubeClient()
+	p := tea.NewProgram(newModel(&client), tea.WithAltScreen())
 
-	go func() {
-		ListPods(p.Send)
-	}()
 	if _, err := p.Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
 }
 
-func ListPods(send func(tea.Msg)) {
+func GetKubeClient() Client {
 	var kubeconfig *string
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -47,24 +44,30 @@ func ListPods(send func(tea.Msg)) {
 	if err != nil {
 		panic(err.Error())
 	}
-	for {
-		pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			panic(err.Error())
-		}
 
-		podsStatuses := make([]PodStatus, len(pods.Items))
-		for i, pod := range pods.Items {
-			status := PodStatus{
-				name:   pod.Name,
-				status: string(pod.Status.Conditions[0].Type),
-				uptime: pod.Status.StartTime.Time.String(),
-			}
-			podsStatuses[i] = status
-		}
-		send(PodMsg{
-			pods: podsStatuses,
-		})
-		time.Sleep(5 * time.Second)
+	return Client{kubeClient: clientset}
+}
+
+type Client struct {
+	kubeClient *kubernetes.Clientset
+}
+
+func (c *Client) GetPods() ([]PodStatus, error) {
+	pods, err := c.kubeClient.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
 	}
+
+	podStatuses := make([]PodStatus, len(pods.Items))
+	for i, pod := range pods.Items {
+		status := PodStatus{
+			name:   pod.Name,
+			status: string(pod.Status.Conditions[0].Type),
+			uptime: pod.Status.StartTime.Time.String(),
+		}
+		podStatuses[i] = status
+	}
+
+	return podStatuses, nil
+
 }
