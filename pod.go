@@ -7,19 +7,13 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-type PodStatus struct {
-	name   string
-	status string
-	uptime string
-}
-
-func (r PodStatus) String() string {
-	return r.name + " : " + r.status + " - " + r.uptime
+func PrintPod(pod v1.Pod) string {
+	return pod.Namespace + " : " + pod.Name
 }
 
 type PodModel struct {
 	client   *Client
-	pods     []PodStatus
+	pods     []v1.Pod
 	quitting bool
 	stop     chan struct{}
 	sub      chan tea.Msg
@@ -58,21 +52,19 @@ type DeletePodMsg struct{ pod *v1.Pod }
 func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case NewPodMsg:
-		m.pods = append(m.pods, PodStatus{
-			name:   msg.pod.Name,
-			status: msg.pod.Status.Message,
-		})
+		m.pods = append(m.pods, *msg.pod)
+
 		sort.Slice(m.pods, func(i, j int) bool {
-			return m.pods[i].name < m.pods[j].name
+			return m.pods[i].Name < m.pods[j].Name
 		})
 		return m, waitForActivity(m.sub)
 	case UpdatePodMsg:
 		return m, waitForActivity(m.sub)
 	case DeletePodMsg:
 		pods := m.pods
-		newList := []PodStatus{}
+		newList := []v1.Pod{}
 		for _, pod := range pods {
-			if pod.name != msg.pod.Name {
+			if pod.Name != msg.pod.Name {
 				newList = append(newList, pod)
 			}
 		}
@@ -85,7 +77,6 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			m.stop <- struct{}{}
 			return m, nil
-			// return m, tea.Quit
 		case "s":
 			m.stop <- struct{}{}
 		case "w":
@@ -123,7 +114,7 @@ func (m PodModel) View() string {
 		} else {
 			s += " "
 		}
-		s += res.String() + "\n"
+		s += PrintPod(res) + "\n"
 	}
 
 	if !m.quitting {

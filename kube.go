@@ -1,13 +1,11 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -41,26 +39,6 @@ func GetKubeClient() Client {
 
 type Client struct {
 	kubeClient *kubernetes.Clientset
-}
-
-func (c *Client) GetPods() ([]PodStatus, error) {
-	pods, err := c.kubeClient.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	podStatuses := make([]PodStatus, len(pods.Items))
-	for i, pod := range pods.Items {
-		status := PodStatus{
-			name:   pod.Name,
-			status: string(pod.Status.Conditions[0].Type),
-			uptime: pod.Status.StartTime.Time.String(),
-		}
-		podStatuses[i] = status
-	}
-
-	return podStatuses, nil
-
 }
 
 func (c *Client) WatchPods(sub chan<- tea.Msg, stop <-chan struct{}) {
