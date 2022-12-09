@@ -23,6 +23,7 @@ type model struct {
 	quitting bool
 	stop     chan struct{}
 	sub      chan tea.Msg
+	cursor   int
 }
 
 func newModel(client *Client) model {
@@ -76,19 +77,28 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.pods = newList
+		// need to check if the cursor is now invalid and move it if appropriate
 		return m, waitForActivity(m.sub)
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q":
 			m.quitting = true
 			m.stop <- struct{}{}
-
 			return m, tea.Quit
 		case "s":
 			m.stop <- struct{}{}
 		case "w":
 			m.client.WatchPods(m.sub, m.stop)
 			return m, nil
+		case "down":
+			if m.cursor < len(m.pods)-1 {
+				m.cursor += 1
+			}
+			return m, nil
+		case "up":
+			if m.cursor > 0 {
+				m.cursor -= 1
+			}
 		}
 	}
 
@@ -106,7 +116,12 @@ func (m model) View() string {
 
 	s += "\n\n"
 
-	for _, res := range m.pods {
+	for index, res := range m.pods {
+		if index == m.cursor {
+			s += ">"
+		} else {
+			s += " "
+		}
 		s += res.String() + "\n"
 	}
 
