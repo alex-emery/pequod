@@ -97,5 +97,6 @@ func (m PodModel) View() string {
 		s += PrintPod(res) + "\n"
 	}
 
+	s += "\nselect a pod using ↑ ↓ and press enter to stream logs"
 	return s
 }

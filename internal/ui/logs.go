@@ -42,6 +42,10 @@ func (m LogModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m LogModel) View() string {
 	s := ""
 
+	if len(m.logs) == 0 {
+		return "press tab then select a pod to stream logs from"
+	}
+
 	for _, log := range m.logs {
 		s += log
 	}

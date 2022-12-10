@@ -6,6 +6,9 @@ Quick example of showing Kubernetes pods in bubble tea.
 
 `go run ./cmd/main.go`
 
+use ↑ and ↓ to choose a pod.
+press enter on choosen pod to stream logs.
+press tab to switch between pod and log view.
 
 ## TODO:
 - [ ] allow for multiple Pages to be displayed at the same time.
