@@ -46,5 +46,6 @@ func (m LogModel) View() string {
 		s += log
 	}
 
+	s += "\nPress 'tab' to go back"
 	return s
 }

@@ -14,20 +14,13 @@ type Page interface {
 	Focus() Page
 }
 
-type selectedPage int
-
-const (
-	nodePage selectedPage = iota
-	logPage
-)
-
 /**
 This is the highest level construct and overall wrapper.
 
 ATM only 1 page is viewable at a time and handles focus between pages
 **/
 type Window struct {
-	pageState selectedPage
+	pageState common.SelectedPage
 	pages     []Page
 	client    *api.Client
 	stop      chan struct{}
@@ -45,24 +38,26 @@ func NewWindow(client *api.Client) Window {
 		client:    client,
 		stop:      make(chan struct{}),
 		sub:       make(chan tea.Msg),
-		pageState: nodePage,
+		pageState: common.NodePage,
 		pages:     pages,
 	}
 }
 
 func (w Window) Init() tea.Cmd {
 	w.client.WatchPods("", w.sub, w.stop)
-	return tea.Batch(w.pages[nodePage].Init(), waitForActivity(w.sub))
+	return tea.Batch(w.pages[common.NodePage].Init(), waitForActivity(w.sub))
 }
 
 func (w Window) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{}
 	switch msg := msg.(type) {
+	case common.SelectPageMsg:
+		w.pageState = msg.PageNumber
 	case common.WaitForActivityMsg:
 		return w, waitForActivity(w.sub)
 	case common.WatchPodLogsMsg:
 		w.client.StreamLogs(context.Background(), *msg.Pod, w.sub)
-		return w, tea.Batch(common.ClearPodLogs(), common.WaitForActivity())
+		return w, tea.Batch(common.ClearPodLogs(), common.SelectPage(common.LogPage), common.WaitForActivity())
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q":
@@ -76,7 +71,7 @@ func (w Window) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			w.pages[w.pageState] = w.pages[w.pageState].Blur()
 			newNum := int(w.pageState+1) % len(w.pages)
 			w.pages[newNum] = w.pages[newNum].Focus()
-			w.pageState = selectedPage(newNum)
+			w.pageState = common.SelectedPage(newNum)
 			return w, nil
 		}
 	}

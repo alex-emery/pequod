@@ -22,3 +22,12 @@ func ClearPodLogs() tea.Cmd {
 		return ClearPodLogsMsg{}
 	}
 }
+
+func SelectPage(number SelectedPage) tea.Cmd {
+	return func() tea.Msg {
+		return SelectPageMsg{
+			PageNumber: number,
+		}
+	}
+
+}

@@ -9,7 +9,8 @@ Quick example of showing Kubernetes pods in bubble tea.
 
 ## TODO:
 - [ ] allow for multiple Pages to be displayed at the same time.
-- [ ] log views for pods
+- [x] log views for pods
+- [ ] log view needs to be a list so it can be scrolled.
 - [ ] namespace filter for pods
 ## Notes
 https://github.com/charmbracelet/bubbletea/blob/master/examples/realtime/main.go
