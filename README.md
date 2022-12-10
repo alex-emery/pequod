@@ -7,6 +7,10 @@ Quick example of showing Kubernetes pods in bubble tea.
 `go run .`
 
 
+## TODO:
+- [ ] allow for multiple panes to be displayed at the same time.
+- [ ] log views for pods
+- [ ] namespace filter for pods
 ## Notes
 https://github.com/charmbracelet/bubbletea/blob/master/examples/realtime/main.go
 

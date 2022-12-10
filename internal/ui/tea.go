@@ -1,8 +1,12 @@
-package main
+package ui
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+/**
+This is just an empty model with a minimum implementation.
+**/
 
 type Model struct {
 }

@@ -1,9 +1,10 @@
-package main
+package api
 
 import (
 	"flag"
 	"path/filepath"
 
+	"github.com/aemery-cb/pequod/internal/common"
 	tea "github.com/charmbracelet/bubbletea"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -13,7 +14,12 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-func GetKubeClient() Client {
+type Client struct {
+	kubeClient *kubernetes.Clientset
+}
+
+// Creates a client which wraps the kube client in helpers.
+func CreateClient() Client {
 	var kubeconfig *string
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -37,28 +43,24 @@ func GetKubeClient() Client {
 	return Client{kubeClient: clientset}
 }
 
-type Client struct {
-	kubeClient *kubernetes.Clientset
-}
-
-func (c *Client) WatchPods(sub chan<- tea.Msg, stop <-chan struct{}) {
-	watchlist := cache.NewListWatchFromClient(c.kubeClient.CoreV1().RESTClient(), "pods", v1.NamespaceAll, fields.Everything())
+func (c *Client) WatchPods(namespace string, sub chan<- tea.Msg, stop <-chan struct{}) {
+	watchlist := cache.NewListWatchFromClient(c.kubeClient.CoreV1().RESTClient(), "pods", namespace, fields.Everything())
 	_, controller := cache.NewInformer(
 		watchlist,
 		&v1.Pod{}, 0,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				sub <- NewPodMsg{pod: pod}
+				sub <- common.NewPodMsg{Pod: pod}
 			},
 			DeleteFunc: func(obj interface{}) {
 				pod := obj.(*v1.Pod)
-				sub <- DeletePodMsg{pod: pod}
+				sub <- common.DeletePodMsg{Pod: pod}
 			},
 			UpdateFunc: func(old interface{}, new interface{}) {
 				oldPod := old.(*v1.Pod)
 				newPod := new.(*v1.Pod)
-				sub <- UpdatePodMsg{old: oldPod, new: newPod}
+				sub <- common.UpdatePodMsg{Old: oldPod, New: newPod}
 			},
 		},
 	)
