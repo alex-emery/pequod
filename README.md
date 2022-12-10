@@ -4,7 +4,7 @@ Quick example of showing Kubernetes pods in bubble tea.
 
 ## Quick start
 
-`go run .`
+`go run ./cmd/main.go`
 
 
 ## TODO:
