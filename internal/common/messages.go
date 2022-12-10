@@ -2,6 +2,8 @@ package common
 
 import v1 "k8s.io/api/core/v1"
 
+type WaitForActivityMsg struct{}
+
 type NewPodMsg struct{ Pod *v1.Pod }
 
 type UpdatePodMsg struct {
@@ -10,4 +12,14 @@ type UpdatePodMsg struct {
 }
 type DeletePodMsg struct{ Pod *v1.Pod }
 
-type WaitForActivityMsg struct{}
+// new log has arrived from a pod.
+type NewLogMsg struct {
+	Pod     *v1.Pod
+	Message string
+}
+
+// trigger to start streaming logs from a pod
+type WatchPodLogsMsg struct{ Pod *v1.Pod }
+
+// clear log message screen
+type ClearPodLogsMsg struct{}

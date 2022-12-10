@@ -8,7 +8,7 @@ Quick example of showing Kubernetes pods in bubble tea.
 
 
 ## TODO:
-- [ ] allow for multiple panes to be displayed at the same time.
+- [ ] allow for multiple Pages to be displayed at the same time.
 - [ ] log views for pods
 - [ ] namespace filter for pods
 ## Notes

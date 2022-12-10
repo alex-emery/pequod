@@ -1,16 +1,24 @@
 package ui
 
 import (
+	"context"
+
 	"github.com/aemery-cb/pequod/internal/api"
 	"github.com/aemery-cb/pequod/internal/common"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type Page interface {
+	tea.Model
+	Blur() Page
+	Focus() Page
+}
+
 type selectedPage int
 
 const (
 	nodePage selectedPage = iota
-	pvcPage
+	logPage
 )
 
 /**
@@ -20,7 +28,7 @@ ATM only 1 page is viewable at a time and handles focus between pages
 **/
 type Window struct {
 	pageState selectedPage
-	pages     []tea.Model
+	pages     []Page
 	client    *api.Client
 	stop      chan struct{}
 	sub       chan tea.Msg
@@ -28,11 +36,11 @@ type Window struct {
 
 func NewWindow(client *api.Client) Window {
 
-	pages := []tea.Model{
+	pages := []Page{
 		NewPodModel(),
-		NewModel(),
+		NewLogModel(),
 	}
-
+	pages[0] = pages[0].Focus()
 	return Window{
 		client:    client,
 		stop:      make(chan struct{}),
@@ -47,34 +55,43 @@ func (w Window) Init() tea.Cmd {
 	return tea.Batch(w.pages[nodePage].Init(), waitForActivity(w.sub))
 }
 
-func (m Window) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (w Window) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{}
 	switch msg := msg.(type) {
 	case common.WaitForActivityMsg:
-		return m, waitForActivity(m.sub)
+		return w, waitForActivity(w.sub)
+	case common.WatchPodLogsMsg:
+		w.client.StreamLogs(context.Background(), *msg.Pod, w.sub)
+		return w, tea.Batch(common.ClearPodLogs(), common.WaitForActivity())
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q":
 			// tell all pages its quitting time so they can gracefully exit.
-			for _, x := range m.pages {
+			w.stop <- struct{}{}
+			for _, x := range w.pages {
 				x.Update(msg)
 			}
-			return m, tea.Quit
+			return w, tea.Quit
 		case "tab":
-			newNum := int(m.pageState+1) % len(m.pages)
-			m.pageState = selectedPage(newNum)
-			return m, nil
+			w.pages[w.pageState] = w.pages[w.pageState].Blur()
+			newNum := int(w.pageState+1) % len(w.pages)
+			w.pages[newNum] = w.pages[newNum].Focus()
+			w.pageState = selectedPage(newNum)
+			return w, nil
 		}
 	}
 
-	newBx, cmd := m.pages[m.pageState].Update(msg)
-	cmds = append(cmds, cmd)
-	m.pages[m.pageState] = newBx
-	return m, tea.Batch(cmds...)
+	for index, page := range w.pages {
+		newModel, cmd := page.Update(msg)
+		w.pages[index], _ = newModel.(Page)
+		cmds = append(cmds, cmd)
+	}
+
+	return w, tea.Batch(cmds...)
 }
 
 func (m Window) View() string {
-	return m.pages[m.pageState].View()
+	return m.pages[m.pageState].View() + "\nPress 'q' to quit"
 }
 
 // non-blocking command to receive new messages from

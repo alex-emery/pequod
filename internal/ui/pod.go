@@ -13,12 +13,13 @@ func PrintPod(pod v1.Pod) string {
 }
 
 type PodModel struct {
+	focus  bool
 	pods   []v1.Pod
 	cursor int
 }
 
 func NewPodModel() PodModel {
-	return PodModel{}
+	return PodModel{focus: false}
 }
 
 func (m PodModel) Init() tea.Cmd {
@@ -32,9 +33,9 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		sort.Slice(m.pods, func(i, j int) bool {
 			return m.pods[i].Name < m.pods[j].Name
 		})
-		return m, common.WaitForActivity
+		return m, common.WaitForActivity()
 	case common.UpdatePodMsg:
-		return m, common.WaitForActivity
+		return m, common.WaitForActivity()
 	case common.DeletePodMsg:
 		pods := m.pods
 		newList := []v1.Pod{}
@@ -45,8 +46,11 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.pods = newList
 		// TODO: check if the cursor position is now invalidated and move if appropriate
-		return m, common.WaitForActivity
+		return m, common.WaitForActivity()
 	case tea.KeyMsg:
+		if !m.focus {
+			return m, nil
+		}
 		switch msg.String() {
 		case "down":
 			if m.cursor < len(m.pods)-1 {
@@ -57,10 +61,24 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor > 0 {
 				m.cursor -= 1
 			}
+		case "enter":
+			if m.cursor <= len(m.pods) {
+				selected := m.pods[m.cursor]
+				return m, common.WatchPodLogs(&selected)
+			}
 		}
 	}
 
 	return m, nil
+}
+
+func (m PodModel) Focus() Page {
+	m.focus = true
+	return m
+}
+func (m PodModel) Blur() Page {
+	m.focus = false
+	return m
 }
 
 func (m PodModel) View() string {
