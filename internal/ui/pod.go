@@ -33,7 +33,6 @@ func NewPodModel() PodModel {
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(7),
 	)
 
 	s := table.DefaultStyles()
