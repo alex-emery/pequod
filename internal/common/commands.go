@@ -23,10 +23,10 @@ func ClearPodLogs() tea.Cmd {
 	}
 }
 
-func SelectPage(number SelectedPage) tea.Cmd {
+func SelectPane(number SelectedPane) tea.Cmd {
 	return func() tea.Msg {
-		return SelectPageMsg{
-			PageNumber: number,
+		return SelectPaneMsg{
+			PaneNumber: number,
 		}
 	}
 

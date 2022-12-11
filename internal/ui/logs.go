@@ -6,26 +6,15 @@ import (
 )
 
 type LogModel struct {
-	focus bool
-	logs  []string
+	logs []string
 }
 
 func NewLogModel() LogModel {
-	return LogModel{focus: false, logs: make([]string, 0)}
+	return LogModel{logs: make([]string, 0)}
 }
 
 func (m LogModel) Init() tea.Cmd {
 	return nil
-}
-
-func (m LogModel) Focus() Page {
-	m.focus = true
-	return m
-}
-
-func (m LogModel) Blur() Page {
-	m.focus = false
-	return m
 }
 
 func (m LogModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

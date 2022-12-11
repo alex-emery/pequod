@@ -10,13 +10,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func PrintPod(pod v1.Pod) string {
-	return pod.Namespace + " : " + pod.Name
-}
-
 type PodModel struct {
 	table table.Model
-	focus bool
 	pods  []v1.Pod
 }
 
@@ -35,7 +30,7 @@ func NewPodModel() PodModel {
 		table.WithFocused(true),
 		table.WithHeight(7),
 	)
-	return PodModel{table: t, focus: false}
+	return PodModel{table: t}
 }
 
 func (m PodModel) Init() tea.Cmd {
@@ -66,9 +61,6 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.UpdateTable()
 		return m, common.WaitForActivity()
 	case tea.KeyMsg:
-		if !m.focus {
-			return m, nil
-		}
 		switch msg.String() {
 		case "enter":
 			index, _ := strconv.Atoi(m.table.SelectedRow()[0])
@@ -84,17 +76,6 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
-}
-
-func (m PodModel) Focus() Page {
-	m.focus = true
-	m.table.Focus()
-	return m
-}
-func (m PodModel) Blur() Page {
-	m.focus = false
-	m.table.Blur()
-	return m
 }
 
 func (m *PodModel) UpdateTable() {

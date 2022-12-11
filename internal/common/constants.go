@@ -1,8 +1,8 @@
 package common
 
-type SelectedPage int
+type SelectedPane int
 
 const (
-	NodePage SelectedPage = iota
-	LogPage
+	NodePane SelectedPane = iota
+	LogPane
 )
