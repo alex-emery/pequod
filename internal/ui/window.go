@@ -46,11 +46,13 @@ func (w Window) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds := []tea.Cmd{}
 	switch msg := msg.(type) {
 	case common.SelectPaneMsg:
+		w.panes[w.selectedPane].Blur()
 		w.selectedPane = msg.PaneNumber
+		w.panes[w.selectedPane].Focus()
 	case common.WaitForActivityMsg:
 		return w, waitForActivity(w.sub)
 	case common.WatchPodLogsMsg:
-		w.client.StreamLogs(context.Background(), *msg.Pod, w.sub)
+		w.client.StreamLogs(context.Background(), msg.Pod, w.sub)
 		return w, tea.Batch(common.ClearPodLogs(), common.SelectPane(common.LogPane), common.WaitForActivity())
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -80,7 +82,7 @@ func (w Window) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Window) View() string {
-	return m.panes[m.selectedPane].View() + "\nPress 'q' to quit"
+	return BaseStyle.Render(m.panes[m.selectedPane].View() + "\nPress 'q' to quit")
 }
 
 // non-blocking command to receive new messages from

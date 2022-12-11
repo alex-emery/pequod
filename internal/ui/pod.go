@@ -2,7 +2,6 @@ package ui
 
 import (
 	"sort"
-	"strconv"
 
 	"github.com/aemery-cb/pequod/internal/common"
 	"github.com/charmbracelet/bubbles/table"
@@ -11,43 +10,15 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-var baseStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("240"))
-
 type PodModel struct {
 	table table.Model
 	pods  []v1.Pod
+	ready bool
 }
 
 func NewPodModel() PodModel {
-	columns := []table.Column{
-		{Title: "id", Width: 4},
-		{Title: "Namespace", Width: 25},
-		{Title: "Name", Width: 30},
-	}
-
-	rows := []table.Row{}
-
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithRows(rows),
-		table.WithFocused(true),
-	)
-
-	s := table.DefaultStyles()
-	s.Header = s.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(false)
-	s.Selected = s.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(false)
-	t.SetStyles(s)
-
-	return PodModel{table: t}
+	// rows := []table.Row{}
+	return PodModel{}
 }
 
 func (m PodModel) Init() tea.Cmd {
@@ -57,6 +28,39 @@ func (m PodModel) Init() tea.Cmd {
 func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		if !m.ready {
+			columnWidth := msg.Width/2 - 3
+			var columns = []table.Column{
+				{Title: "Namespace", Width: columnWidth},
+				{Title: "Name", Width: columnWidth},
+			}
+			t := table.New(
+				table.WithColumns(columns),
+				table.WithFocused(true),
+			)
+
+			s := table.DefaultStyles()
+			s.Header = s.Header.
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("240")).
+				BorderBottom(true).
+				Bold(false)
+			s.Selected = s.Selected.
+				Foreground(lipgloss.Color("229")).
+				Background(lipgloss.Color("57")).
+				Bold(false)
+			t.SetStyles(s)
+			m.table = t
+
+			m.table.SetHeight(msg.Height - 5)
+			m.table.SetWidth(msg.Width)
+			m.ready = true
+		} else {
+			m.table.SetHeight(msg.Height - 5)
+			m.table.SetWidth(msg.Width)
+		}
+
 	case common.NewPodMsg:
 		m.pods = append(m.pods, *msg.Pod)
 		sort.Slice(m.pods, func(i, j int) bool {
@@ -80,7 +84,7 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "enter":
-			index, _ := strconv.Atoi(m.table.SelectedRow()[0])
+			index := m.table.Cursor()
 			if index <= len(m.pods) {
 				selected := m.pods[index]
 				return m, common.WatchPodLogs(&selected)
@@ -97,9 +101,8 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *PodModel) UpdateTable() {
 	var rows []table.Row
-	for index, pod := range m.pods {
+	for _, pod := range m.pods {
 		rows = append(rows, table.Row{
-			strconv.Itoa(index),
 			pod.Namespace,
 			pod.Name,
 		})
@@ -108,6 +111,6 @@ func (m *PodModel) UpdateTable() {
 }
 func (m PodModel) View() string {
 
-	return baseStyle.Render(m.table.View())
+	return m.table.View()
 
 }
