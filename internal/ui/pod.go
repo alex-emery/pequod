@@ -7,8 +7,13 @@ import (
 	"github.com/aemery-cb/pequod/internal/common"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	v1 "k8s.io/api/core/v1"
 )
+
+var baseStyle = lipgloss.NewStyle().
+	BorderStyle(lipgloss.NormalBorder()).
+	BorderForeground(lipgloss.Color("240"))
 
 type PodModel struct {
 	table table.Model
@@ -30,6 +35,19 @@ func NewPodModel() PodModel {
 		table.WithFocused(true),
 		table.WithHeight(7),
 	)
+
+	s := table.DefaultStyles()
+	s.Header = s.Header.
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(lipgloss.Color("240")).
+		BorderBottom(true).
+		Bold(false)
+	s.Selected = s.Selected.
+		Foreground(lipgloss.Color("229")).
+		Background(lipgloss.Color("57")).
+		Bold(false)
+	t.SetStyles(s)
+
 	return PodModel{table: t}
 }
 
@@ -91,7 +109,6 @@ func (m *PodModel) UpdateTable() {
 }
 func (m PodModel) View() string {
 
-	return m.table.View()
-	// s += "\nselect a pod using ↑ ↓ and press enter to stream logs"
-	// return s
+	return baseStyle.Render(m.table.View())
+
 }
