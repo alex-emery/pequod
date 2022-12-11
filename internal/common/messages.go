@@ -24,6 +24,6 @@ type WatchPodLogsMsg struct{ Pod *v1.Pod }
 // clear log message screen
 type ClearPodLogsMsg struct{}
 
-type SelectPageMsg struct {
-	PageNumber SelectedPage
+type SelectPaneMsg struct {
+	PaneNumber SelectedPane
 }

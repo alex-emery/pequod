@@ -72,7 +72,7 @@ func (c *Client) WatchPods(namespace string, sub chan<- tea.Msg, stop <-chan str
 	go controller.Run(stop)
 }
 
-func (c *Client) StreamLogs(ctx context.Context, pod v1.Pod, sub chan<- tea.Msg) {
+func (c *Client) StreamLogs(ctx context.Context, pod *v1.Pod, sub chan<- tea.Msg) {
 	req := c.kubeClient.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &v1.PodLogOptions{Follow: true})
 	podLogs, err := req.Stream(ctx)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *Client) StreamLogs(ctx context.Context, pod v1.Pod, sub chan<- tea.Msg)
 		defer podLogs.Close()
 		for {
 			bytes, err := r.ReadBytes('\n')
-			sub <- common.NewLogMsg{Message: string(bytes)}
+			sub <- common.NewLogMsg{Pod: pod, Message: string(bytes)}
 			if err != nil {
 				if !errors.Is(err, io.EOF) {
 					return

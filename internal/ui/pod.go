@@ -4,22 +4,21 @@ import (
 	"sort"
 
 	"github.com/aemery-cb/pequod/internal/common"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	v1 "k8s.io/api/core/v1"
 )
 
-func PrintPod(pod v1.Pod) string {
-	return pod.Namespace + " : " + pod.Name
-}
-
 type PodModel struct {
-	focus  bool
-	pods   []v1.Pod
-	cursor int
+	table table.Model
+	pods  []v1.Pod
+	ready bool
 }
 
 func NewPodModel() PodModel {
-	return PodModel{focus: false}
+	// rows := []table.Row{}
+	return PodModel{}
 }
 
 func (m PodModel) Init() tea.Cmd {
@@ -27,12 +26,47 @@ func (m PodModel) Init() tea.Cmd {
 }
 
 func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		if !m.ready {
+			columnWidth := msg.Width/2 - 3
+			var columns = []table.Column{
+				{Title: "Namespace", Width: columnWidth},
+				{Title: "Name", Width: columnWidth},
+			}
+			t := table.New(
+				table.WithColumns(columns),
+				table.WithFocused(true),
+			)
+
+			s := table.DefaultStyles()
+			s.Header = s.Header.
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("240")).
+				BorderBottom(true).
+				Bold(false)
+			s.Selected = s.Selected.
+				Foreground(lipgloss.Color("229")).
+				Background(lipgloss.Color("57")).
+				Bold(false)
+			t.SetStyles(s)
+			m.table = t
+
+			m.table.SetHeight(msg.Height - 5)
+			m.table.SetWidth(msg.Width)
+			m.ready = true
+		} else {
+			m.table.SetHeight(msg.Height - 5)
+			m.table.SetWidth(msg.Width)
+		}
+
 	case common.NewPodMsg:
 		m.pods = append(m.pods, *msg.Pod)
 		sort.Slice(m.pods, func(i, j int) bool {
 			return m.pods[i].Name < m.pods[j].Name
 		})
+		m.UpdateTable()
 		return m, common.WaitForActivity()
 	case common.UpdatePodMsg:
 		return m, common.WaitForActivity()
@@ -45,58 +79,38 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		m.pods = newList
-		// TODO: check if the cursor position is now invalidated and move if appropriate
+		m.UpdateTable()
 		return m, common.WaitForActivity()
 	case tea.KeyMsg:
-		if !m.focus {
-			return m, nil
-		}
 		switch msg.String() {
-		case "down":
-			if m.cursor < len(m.pods)-1 {
-				m.cursor += 1
-			}
-			return m, nil
-		case "up":
-			if m.cursor > 0 {
-				m.cursor -= 1
-			}
 		case "enter":
-			if m.cursor <= len(m.pods) {
-				selected := m.pods[m.cursor]
+			index := m.table.Cursor()
+			if index <= len(m.pods) {
+				selected := m.pods[index]
 				return m, common.WatchPodLogs(&selected)
 			}
 		}
 	}
 
-	return m, nil
+	table, cmd := m.table.Update(msg)
+	m.table = table
+	cmds = append(cmds, cmd)
+
+	return m, tea.Batch(cmds...)
 }
 
-func (m PodModel) Focus() Page {
-	m.focus = true
-	return m
-}
-func (m PodModel) Blur() Page {
-	m.focus = false
-	return m
-}
-
-func (m PodModel) View() string {
-	var s string
-
-	s += "Pods"
-
-	s += "\n\n"
-
-	for index, res := range m.pods {
-		if index == m.cursor {
-			s += ">"
-		} else {
-			s += " "
-		}
-		s += PrintPod(res) + "\n"
+func (m *PodModel) UpdateTable() {
+	var rows []table.Row
+	for _, pod := range m.pods {
+		rows = append(rows, table.Row{
+			pod.Namespace,
+			pod.Name,
+		})
 	}
+	m.table.SetRows(rows)
+}
+func (m PodModel) View() string {
 
-	s += "\nselect a pod using ↑ ↓ and press enter to stream logs"
-	return s
+	return m.table.View()
+
 }
