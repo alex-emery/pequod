@@ -47,6 +47,7 @@ func (m LogModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	headerHeight := lipgloss.Height(m.headerView())
 	verticalHeight := headerHeight + 3
 
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		if !m.ready {
@@ -60,8 +61,17 @@ func (m LogModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.Width = msg.Width
 			m.viewport.Height = msg.Height - verticalHeight
 		}
-
+	case common.WatchPodLogsMsg:
+		if msg.Selected {
+			m.pod = msg.Pod
+			m.logs = m.logs[:0]
+			m.viewport.SetContent(strings.Join(m.logs, ""))
+			return m, common.WaitForActivity()
+		}
 	case common.NewLogMsg:
+		if m.pod != nil && m.pod.Name != msg.Pod.Name {
+			return m, common.WaitForActivity()
+		}
 		m.pod = msg.Pod
 		m.logs = append(m.logs, msg.Message)
 		m.viewport.SetContent(strings.Join(m.logs, ""))

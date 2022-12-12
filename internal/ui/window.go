@@ -53,7 +53,7 @@ func (w Window) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return w, waitForActivity(w.sub)
 	case common.WatchPodLogsMsg:
 		w.client.StreamLogs(context.Background(), msg.Pod, w.sub)
-		return w, tea.Batch(common.ClearPodLogs(), common.SelectPane(common.LogPane), common.WaitForActivity())
+		cmds = append(cmds, tea.Batch(common.ClearPodLogs(), common.SelectPane(common.LogPane), common.WaitForActivity()))
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q":

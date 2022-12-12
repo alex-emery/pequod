@@ -13,6 +13,7 @@ import (
 type PodModel struct {
 	table table.Model
 	pods  []v1.Pod
+	selectedPod v1.Pod
 	ready bool
 }
 
@@ -86,8 +87,8 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			index := m.table.Cursor()
 			if index <= len(m.pods) {
-				selected := m.pods[index]
-				return m, common.WatchPodLogs(&selected)
+				m.selectedPod = m.pods[index]
+				return m, common.WatchPodLogs(&m.selectedPod, true)
 			}
 		}
 	}
