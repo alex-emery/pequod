@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/aemery-cb/pequod/internal/common"
@@ -13,7 +14,9 @@ import (
 type LogModel struct {
 	logs     []string
 	pod      *v1.Pod
-	viewport viewport.Model
+	logsView viewport.Model
+	podView  viewport.Model
+	focussed int
 	ready    bool
 }
 
@@ -36,7 +39,7 @@ func (m LogModel) headerView() string {
 	if m.pod != nil {
 		title = titleStyle.Render(m.pod.Name)
 	}
-	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title)))
+	line := strings.Repeat("─", max(0, m.logsView.Width-lipgloss.Width(title)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
 }
 
@@ -48,29 +51,69 @@ func (m LogModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	verticalHeight := headerHeight + 3
 
 	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "right":
+			m.focussed = 1
+		case "left":
+			m.focussed = 0
+		}
+		if m.focussed == 0 {
+			m.logsView, cmd = m.logsView.Update(msg)
+			return m, cmd
+		} else {
+			m.podView, cmd = m.podView.Update(msg)
+			return m, cmd
+		}
+
+	case tea.MouseMsg:
+		if m.focussed == 0 {
+			m.logsView, cmd = m.logsView.Update(msg)
+			return m, cmd
+		} else {
+			m.podView, cmd = m.podView.Update(msg)
+			return m, cmd
+		}
+
 	case tea.WindowSizeMsg:
 		if !m.ready {
 
-			m.viewport = viewport.New(msg.Width-2, msg.Height-verticalHeight)
-			m.viewport.YPosition = headerHeight
+			m.logsView = viewport.New(msg.Width/2, msg.Height-verticalHeight)
+			m.podView = viewport.New(msg.Width/2, msg.Height-verticalHeight)
 
-			m.viewport.SetContent(strings.Join(m.logs, ""))
+			m.logsView.YPosition = headerHeight
+			m.podView.YPosition = headerHeight
+
+			m.logsView.SetContent(strings.Join(m.logs, ""))
+			json, _ := json.MarshalIndent(m.pod, "", " ")
+			m.podView.SetContent(string(json))
+
 			m.ready = true
 		} else {
-			m.viewport.Width = msg.Width
-			m.viewport.Height = msg.Height - verticalHeight
+			m.logsView.Width = msg.Width / 2
+
+			m.logsView.Height = msg.Height - verticalHeight
+
+			m.podView.Width = msg.Width - m.logsView.Width
+			m.logsView.Height = msg.Height - verticalHeight
 		}
 
 	case common.NewLogMsg:
 		m.pod = msg.Pod
 		m.logs = append(m.logs, msg.Message)
-		m.viewport.SetContent(strings.Join(m.logs, ""))
+		m.logsView.SetContent(strings.Join(m.logs, ""))
+		json, _ := json.MarshalIndent(m.pod, "", " ")
+		m.podView.SetContent(string(json))
 		return m, common.WaitForActivity()
 	case common.ClearPodLogsMsg:
 		m.logs = make([]string, 0)
 	}
-	m.viewport, cmd = m.viewport.Update(msg)
+
+	m.logsView, cmd = m.logsView.Update(msg)
 	cmds = append(cmds, cmd)
+	m.podView, cmd = m.podView.Update(msg)
+	cmds = append(cmds, cmd)
+
 	return m, tea.Batch(cmds...)
 }
 
@@ -79,7 +122,7 @@ func (m LogModel) View() string {
 		return "\n  Initializing..."
 	}
 
-	return m.headerView() + "\n" + m.viewport.View()
+	return lipgloss.JoinHorizontal(0, m.headerView()+"\n"+m.logsView.View(), m.podView.View())
 }
 
 func max(a, b int) int {
