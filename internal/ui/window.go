@@ -19,6 +19,8 @@ type Window struct {
 	client       *api.Client
 	stop         chan struct{}
 	sub          chan tea.Msg
+	width        int
+	height       int
 }
 
 func NewWindow(client *api.Client) Window {
@@ -70,6 +72,9 @@ func (w Window) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			w.selectedPane = common.SelectedPane(newNum)
 			return w, nil
 		}
+	case tea.WindowSizeMsg:
+		w.height = msg.Height
+		w.width = msg.Width
 	}
 
 	for index, page := range w.panes {
@@ -82,7 +87,7 @@ func (w Window) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Window) View() string {
-	return BaseStyle.Render(m.panes[m.selectedPane].View() + "\nPress 'q' to quit")
+	return BaseStyle.Width(m.width - 2).Height(m.height - 4).Render(m.panes[m.selectedPane].View() + "\nPress 'q' to quit")
 }
 
 // non-blocking command to receive new messages from

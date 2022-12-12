@@ -8,7 +8,15 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wordwrap"
 	v1 "k8s.io/api/core/v1"
+)
+
+type SelectedView int
+
+const (
+	LogView = iota
+	PodView
 )
 
 type LogModel struct {
@@ -16,8 +24,9 @@ type LogModel struct {
 	pod      *v1.Pod
 	logsView viewport.Model
 	podView  viewport.Model
-	focussed int
+	focussed SelectedView
 	ready    bool
+	wordWrap int
 }
 
 var titleStyle = func() lipgloss.Style {
@@ -43,6 +52,13 @@ func (m LogModel) headerView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
 }
 
+func (m *LogModel) UpdateContent() {
+
+	m.logsView.SetContent(wordwrap.String(strings.Join(m.logs, ""), m.wordWrap))
+	json, _ := json.MarshalIndent(m.pod, "", " ")
+	m.podView.SetContent(wordwrap.String(string(json), m.wordWrap))
+
+}
 func (m LogModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	var cmd tea.Cmd
@@ -54,11 +70,11 @@ func (m LogModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "right":
-			m.focussed = 1
+			m.focussed = PodView
 		case "left":
-			m.focussed = 0
+			m.focussed = LogView
 		}
-		if m.focussed == 0 {
+		if m.focussed == LogView {
 			m.logsView, cmd = m.logsView.Update(msg)
 			return m, cmd
 		} else {
@@ -81,29 +97,30 @@ func (m LogModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logsView = viewport.New(msg.Width/2, msg.Height-verticalHeight)
 			m.podView = viewport.New(msg.Width/2, msg.Height-verticalHeight)
 
+			m.wordWrap = msg.Width / 2
 			m.logsView.YPosition = headerHeight
 			m.podView.YPosition = headerHeight
 
-			m.logsView.SetContent(strings.Join(m.logs, ""))
-			json, _ := json.MarshalIndent(m.pod, "", " ")
-			m.podView.SetContent(string(json))
-
+			m.UpdateContent()
 			m.ready = true
+
 		} else {
-			m.logsView.Width = msg.Width / 2
-
+			m.logsView.Width = msg.Width/2 - 2
 			m.logsView.Height = msg.Height - verticalHeight
 
-			m.podView.Width = msg.Width - m.logsView.Width
+			m.podView.Width = msg.Width/2 - 2
 			m.logsView.Height = msg.Height - verticalHeight
+
+			m.wordWrap = msg.Width/2 - 2
+			m.UpdateContent()
 		}
 
 	case common.NewLogMsg:
 		m.pod = msg.Pod
 		m.logs = append(m.logs, msg.Message)
-		m.logsView.SetContent(strings.Join(m.logs, ""))
-		json, _ := json.MarshalIndent(m.pod, "", " ")
-		m.podView.SetContent(string(json))
+
+		m.UpdateContent()
+
 		return m, common.WaitForActivity()
 	case common.ClearPodLogsMsg:
 		m.logs = make([]string, 0)
