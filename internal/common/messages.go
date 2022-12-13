@@ -19,9 +19,8 @@ type NewLogMsg struct {
 }
 
 // trigger to start streaming logs from a pod
-type WatchPodLogsMsg struct{ 
+type WatchPodLogsMsg struct {
 	Pod *v1.Pod
-	Selected bool 
 }
 
 // clear log message screen

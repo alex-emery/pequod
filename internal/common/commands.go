@@ -11,9 +11,9 @@ func WaitForActivity() tea.Cmd {
 	}
 }
 
-func WatchPodLogs(pod *v1.Pod, selected bool) tea.Cmd {
+func WatchPodLogs(pod *v1.Pod) tea.Cmd {
 	return func() tea.Msg {
-		return WatchPodLogsMsg{Pod: pod, Selected: selected}
+		return WatchPodLogsMsg{Pod: pod}
 	}
 }
 

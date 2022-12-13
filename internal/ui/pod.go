@@ -11,10 +11,10 @@ import (
 )
 
 type PodModel struct {
-	table table.Model
-	pods  []v1.Pod
+	table       table.Model
+	pods        []v1.Pod
 	selectedPod v1.Pod
-	ready bool
+	ready       bool
 }
 
 func NewPodModel() PodModel {
@@ -88,7 +88,7 @@ func (m PodModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			index := m.table.Cursor()
 			if index <= len(m.pods) {
 				m.selectedPod = m.pods[index]
-				return m, common.WatchPodLogs(&m.selectedPod, true)
+				return m, common.WatchPodLogs(&m.selectedPod)
 			}
 		}
 	}
